@@ -19,13 +19,14 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/undistort_output.png "Undistorted"
+[image1]: ./output_images/undistorted_image.jpg "Undistorted"
 [image2]: ./test_images/test1.jpg "Road Transformed"
-[image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+[image3]: ./output_images/binary_img.jpg "Binary Example"
+[image4]: ./output_images/warped.jpg "Warp Example"
+[image5]: ./output_images/fit1.jpg "Windowing Technique"
+[image5_1]: ./output_images/fit2.jpg "Look Ahead Technique"
+[image6]: ./output_images/test1.jpg "Output"
+[video1]: ./project_video_edited.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
@@ -43,7 +44,7 @@ You're reading it!
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).  
+The code for this step is contained in the third code cell of the IPython notebook located in `./P2_clean.ipynb`
 
 I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
 
@@ -60,35 +61,21 @@ To demonstrate this step, I will describe how I apply the distortion correction 
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+I used a combination of color, gradient and magnitude thresholds  to generate a binary image at cell 3 in the same file.  Here's an example of my output for this step. 
 
 ![alt text][image3]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
-
-```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
-```
-
-This resulted in the following source and destination points:
+The code for my perspective transform includes a function called `getWarpedImage()`, which can be found in the `Pipeline` class in the same notebook.  The `warper()` function takes as inputs an image (`img`) and outputs a birdeye view of the ground. I have hardcoded the source and destination points as follows:
 
 | Source        | Destination   | 
 |:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+| 1280, 700      | 1280, 720        | 
+| 0, 700      | 0, 720      |
+| 546, 460     | 0, 720      |
+| 732, 460      | 1280, 0        |
+
 
 I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
 
@@ -96,17 +83,25 @@ I verified that my perspective transform was working as expected by drawing the 
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+I used the binary image and applied warp transform to it. Afterwards, I tried to fit some polynomials in the image. To fit the polynomials I used two technniques: 
+
+* Windowing Technique: I identified individual starting points for the line and made a list of indices which were in the window. After I got the list, I fitted the lines using `np.polyfit()` function and saved the coefficients. 
+
+* Look Ahead Technique: If I knew what my previous lines were, then I don't need to use the windowing technique again as it is computationally heavier. Instead, I could at the points around my previous fit and make new fits accordinly.
 
 ![alt text][image5]
+![alt text][image5_1]
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+Radius of curvature is calculated via `getRadiusOfCurvature()` function which uses the formula $\sqrt{1+(2Ay + B)^2}/(2A)$
+where A, B, C are the means of the coefficients of the recent fits of the polynomial $Ay^2+By+C$ 
+ROC is also stored in another list, and the mean ROC of the past 20 frames are outputted 
+
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
+I implemented this step in the `process()` function of the `Pipeline` class in my code in the same file. Here is an example of my result on a test image:
 
 ![alt text][image6]
 
@@ -116,7 +111,7 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](./project_video_edited.mp4)
 
 ---
 
@@ -124,4 +119,9 @@ Here's a [link to my video result](./project_video.mp4)
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+* The lines and the changes to ROC weren't smooth, so a smoothening process was applied to it. 
+* A huge time was spent to configure the parameters so that it is able to work on most frames, yet however, in the challenge video and the harder challenge video, it fails to identifies the correct lines.
+* This pipeline fails in the presence of shadows and the polyfit polynomial starts including those points too, thus outputing a very absurd polynomial.
+* This pipelin also fails when the camera isn't clean, the brightness changes very randomly and there are other obstacles near your lanes which are getting identified as lanes instead of the lanes itself, thus again, outputting a very absurd polynomial.
+* More time could be spent in tuning the parameters, especially the masks by checking out various color spaces and their combinations to make the pipeline more robust
+* Some ML approaches could be employed which could identify the lanes
